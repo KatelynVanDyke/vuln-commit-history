@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Iterable
+
+
+def stable_id(*parts: str, length: int = 20) -> str:
+    raw = "\0".join(parts).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()[:length]
 
 
 def read_json(path: str | Path) -> Any:

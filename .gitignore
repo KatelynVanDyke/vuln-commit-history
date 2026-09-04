@@ -2,8 +2,13 @@
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
-data/megavul/
+data/megavul/raw/
+data/megavul/pairs/
+data/megavul/coming_output/
 data/repositories/
-data/pairs/
-data/coming_output/
+data/primevul/raw/
+data/primevul/pairs/
+data/primevul/gumtree_output/
+data/primevul/validation_pairs/
+data/primevul/validation_gumtree_output/
 *.jar

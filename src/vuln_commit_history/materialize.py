@@ -11,7 +11,13 @@ def materialize_transitions(
     repositories_dir: str | Path,
     pairs_dir: str | Path,
     clone_missing: bool = False,
+    source_filename: str | None = None,
+    target_filename: str | None = None,
+    skip_existing: bool = False,
 ) -> dict:
+    """Materializes source/target git blobs for every transition. Default output layout is
+    Coming's nested convention (pairs_dir/sample_id/f0000/{sample_id}_f0000_{s,t}.java); pass
+    source_filename/target_filename (e.g. "source.c"/"target.c") for a flat layout instead."""
     transitions = read_jsonl(transitions_path)
     repositories_root = Path(repositories_dir)
     pairs_root = Path(pairs_dir)
@@ -21,6 +27,18 @@ def materialize_transitions(
     for transition in transitions:
         sample_id = transition["sample_id"]
         try:
+            if source_filename and target_filename:
+                file_root = pairs_root / sample_id
+                source_path, target_path = file_root / source_filename, file_root / target_filename
+            else:
+                file_root = pairs_root / sample_id / "f0000"
+                source_path = file_root / f"{sample_id}_f0000_s.java"
+                target_path = file_root / f"{sample_id}_f0000_t.java"
+
+            if skip_existing and source_path.is_file() and target_path.is_file():
+                report["materialized"].append({"sample_id": sample_id})
+                continue
+
             repository = git_ops.repo_directory(
                 repositories_root, transition["project"], transition["clone_url"]
             )
@@ -31,12 +49,11 @@ def materialize_transitions(
             source = git_ops.read_blob(repository, transition["source_commit"], transition["file_path"])
             target = git_ops.read_blob(repository, transition["target_commit"], transition["file_path"])
 
-            file_root = pairs_root / sample_id / "f0000"
             file_root.mkdir(parents=True, exist_ok=True)
-            (file_root / f"{sample_id}_f0000_s.java").write_text(source, encoding="utf-8")
-            (file_root / f"{sample_id}_f0000_t.java").write_text(target, encoding="utf-8")
+            source_path.write_text(source, encoding="utf-8")
+            target_path.write_text(target, encoding="utf-8")
             report["materialized"].append({"sample_id": sample_id})
-        except Exception as exc:  # keep a complete exclusion audit, mirroring the sibling repo
+        except Exception as exc:
             report["failed"].append({"sample_id": sample_id, "error": str(exc)})
 
     write_json(pairs_root / "materialization_report.json", report)
